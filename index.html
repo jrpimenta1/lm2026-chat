@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>LM2026 | Bot Drive Transformation</title>
 
+  <!-- Favicon (usa o mesmo ícone do bot) -->
+  <link rel="icon" href="/bot-icon.png" />
+
   <!-- Bot Framework Web Chat -->
   <script src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
 
@@ -85,7 +88,7 @@
   </div>
 
   <script>
-    // Token Endpoint (Copilot Studio → Web app / Email token endpoint conforme a tua configuração)
+    // Token Endpoint (Copilot Studio → Web app channel → Token endpoint)
     const tokenEndpoint =
       "https://0f0a81529bbde17b958c1afc6ed2af.58.environment.api.powerplatform.com/powervirtualagents/botsbyschema/copilots_header_a2b4e/directline/token?api-version=2022-03-01-preview";
 
@@ -144,7 +147,7 @@
           bubbleFromUserBorderRadius: 18
         };
 
-        // 5) Store: envia evento de arranque para tentar disparar o greeting
+        // 5) Store: envia evento de arranque para disparar a mensagem de boas-vindas
         let greetingSent = false;
         const store = window.WebChat.createStore(
           {},
@@ -152,7 +155,6 @@
             if (action.type === "DIRECT_LINE/CONNECT_FULFILLED" && !greetingSent) {
               greetingSent = true;
 
-              // Evento para iniciar conversa (o bot tem de ter um tópico a tratar este evento)
               store.dispatch({
                 type: "WEB_CHAT/SEND_EVENT",
                 payload: {
@@ -160,9 +162,6 @@
                   value: { locale: navigator.language || "pt-PT" }
                 }
               });
-
-              // (Opcional) fallback se o teu bot não tratar eventos:
-              // store.dispatch({ type: "WEB_CHAT/SEND_MESSAGE", payload: { text: "hello" } });
             }
             return next(action);
           }
@@ -211,6 +210,11 @@
     closeBtn.addEventListener("click", () => {
       popup.classList.remove("visible");
       openBtn.classList.remove("hidden");
+    });
+
+    // ✅ Abrir automaticamente o chat ao carregar a página (opcional, mas útil para demo)
+    window.addEventListener("load", () => {
+      openBtn.click();
     });
   </script>
 </body>
