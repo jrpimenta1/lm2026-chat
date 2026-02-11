@@ -132,13 +132,6 @@
       margin-top: 0 !important;
     }
 
-    /* We will control alignment dynamically via JS (hybrid) */
-    #webchat [role="log"]{
-      display:flex !important;
-      flex-direction: column !important;
-      align-content: flex-start !important;
-    }
-
     @media (max-width: 980px){
       .page{ grid-template-columns: 1fr; }
       .chatBody{ height: 70vh; min-height: 520px; }
@@ -156,7 +149,7 @@
   <main class="page">
     <section class="brandCard">
       <div class="brandInner">
-        <img class="eventLogo" src="/event-logo.png?v=6" alt="LM2026 - Driving Transformation" />
+        <img class="eventLogo" src="/event-logo.png?v=7" alt="LM2026 - Driving Transformation" />
         <h1>LM2026 — Bot Drive Transformation</h1>
         <p class="subtitle" id="subtitle"></p>
         <div class="hint" id="examples"></div>
@@ -166,7 +159,7 @@
     <section class="chatCard" id="chat-card">
       <div class="chatHeader">
         <div class="chatTitle">
-          <img src="/bot-icon.png?v=6" alt="Bot icon" />
+          <img src="/bot-icon.png?v=7" alt="Bot icon" />
           Bot Drive Transformation
         </div>
       </div>
@@ -211,32 +204,86 @@
         </div>`;
     }
 
-    // ✅ HYBRID behaviour:
-    // - If transcript content fits in view: align TOP (no big blank space)
-    // - If it overflows: align BOTTOM (normal chat)
-    function applyHybridTranscriptLayout() {
-      const log = document.querySelector("#webchat [role='log']");
-      if (!log) return;
+    // ---------- HYBRID FIX (robust) ----------
+    function findTranscriptScroller() {
+      const root = document.getElementById("webchat");
+      if (!root) return null;
 
-      // Force flex container
-      log.style.display = "flex";
-      log.style.flexDirection = "column";
-      log.style.alignContent = "flex-start";
+      const candidates = Array.from(
+        root.querySelectorAll(
+          "[role='log'], .webchat__basic-transcript__scrollable, [class*='basic-transcript__scrollable'], [class*='scrollable']"
+        )
+      );
 
-      // Determine if content fits in viewport
-      const fits = log.scrollHeight <= (log.clientHeight + 4);
-
-      if (fits) {
-        // Few messages -> start at top
-        log.style.justifyContent = "flex-start";
-        log.scrollTop = 0;
-      } else {
-        // Many messages -> behave like normal chat (bottom)
-        log.style.justifyContent = "flex-end";
-        log.scrollTop = log.scrollHeight;
+      // Prefer an element that is actually scrollable (overflow-y auto/scroll) and has height
+      for (const el of candidates) {
+        const cs = window.getComputedStyle(el);
+        const overflowY = (cs.overflowY || "").toLowerCase();
+        if ((overflowY === "auto" || overflowY === "scroll") && el.clientHeight > 50) {
+          return el;
+        }
       }
+
+      // Fallback: pick the tallest candidate
+      candidates.sort((a, b) => (b.clientHeight || 0) - (a.clientHeight || 0));
+      return candidates[0] || null;
     }
 
+    let rafPending = false;
+    function applyHybridTranscriptLayout() {
+      if (rafPending) return;
+      rafPending = true;
+
+      requestAnimationFrame(() => {
+        rafPending = false;
+
+        const scroller = findTranscriptScroller();
+        if (!scroller) return;
+
+        // Make sure it's flex (WebChat usually is; we enforce in case it isn't)
+        scroller.style.display = "flex";
+        scroller.style.flexDirection = "column";
+        scroller.style.alignContent = "flex-start";
+
+        const fits = scroller.scrollHeight <= (scroller.clientHeight + 6);
+
+        if (fits) {
+          // Few messages -> no giant blank area
+          scroller.style.justifyContent = "flex-start";
+          scroller.scrollTop = 0;
+        } else {
+          // Many messages -> behave like normal chat (bottom)
+          scroller.style.justifyContent = "flex-end";
+          scroller.scrollTop = scroller.scrollHeight;
+        }
+      });
+    }
+
+    function installTranscriptObserver() {
+      const root = document.getElementById("webchat");
+      if (!root) return;
+
+      const obs = new MutationObserver(() => {
+        // Apply after DOM updates
+        applyHybridTranscriptLayout();
+        // Apply again next frame (WebChat sometimes updates in 2 passes)
+        requestAnimationFrame(applyHybridTranscriptLayout);
+      });
+
+      obs.observe(root, { childList: true, subtree: true });
+
+      window.addEventListener("resize", () => {
+        setTimeout(applyHybridTranscriptLayout, 100);
+      });
+
+      // Initial kick
+      setTimeout(() => {
+        applyHybridTranscriptLayout();
+        requestAnimationFrame(applyHybridTranscriptLayout);
+      }, 600);
+    }
+
+    // ---------- WebChat ----------
     async function initWebChat() {
       try {
         if (!window.WebChat) throw new Error("WebChat library não carregou.");
@@ -263,7 +310,7 @@
 
         const styleOptions = {
           accent: "#0b6a77",
-          botAvatarImage: `${window.location.origin}/bot-icon.png?v=6`,
+          botAvatarImage: `${window.location.origin}/bot-icon.png?v=7`,
           botAvatarInitials: "DT",
           userAvatarInitials: "U",
           showAvatarInGroup: true,
@@ -290,13 +337,14 @@
               });
             }
 
-            // After any activity, re-apply hybrid layout
+            // Any activity → re-apply hybrid layout (DOM may update after this)
             if (
               action.type === "DIRECT_LINE/INCOMING_ACTIVITY" ||
               action.type === "DIRECT_LINE/POST_ACTIVITY_FULFILLED" ||
               action.type === "DIRECT_LINE/CONNECT_FULFILLED"
             ) {
-              setTimeout(applyHybridTranscriptLayout, 60);
+              setTimeout(applyHybridTranscriptLayout, 120);
+              requestAnimationFrame(applyHybridTranscriptLayout);
             }
 
             return result;
@@ -313,15 +361,11 @@
           document.getElementById("webchat")
         );
 
-        // Initial layout + keep it correct on resize
-        setTimeout(() => {
-          applyHybridTranscriptLayout();
-          document.querySelector("#webchat input")?.focus();
-        }, 700);
+        installTranscriptObserver();
 
-        window.addEventListener("resize", () => {
-          setTimeout(applyHybridTranscriptLayout, 100);
-        });
+        setTimeout(() => {
+          document.querySelector("#webchat input")?.focus();
+        }, 800);
 
       } catch (e) {
         console.error(e);
