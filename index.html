@@ -55,18 +55,17 @@
 
     .brandInner{
       padding: 22px 22px 18px 22px;
-      /* Keep text left-aligned, but allow centred logo */
       text-align: left;
     }
 
-    /* ✅ Centred event logo */
+    /* Logo centrado */
     .eventLogo{
-      width: 320px;              /* tweak if needed */
+      width: 320px;
       max-width: 100%;
       border-radius: 14px;
       border: 1px solid var(--border);
       display:block;
-      margin: 0 auto 14px auto;  /* centres horizontally */
+      margin: 0 auto 14px auto;
       background: transparent;
     }
 
@@ -109,7 +108,6 @@
       font-weight: 700;
     }
 
-    /* Header icon styling (works well with white/transparent bot icon) */
     .chatTitle img{
       width: 22px;
       height: 22px;
@@ -122,7 +120,7 @@
     }
 
     .chatBody{
-      height: 660px; /* desktop default */
+      height: 660px;
       background:#fff;
     }
 
@@ -130,20 +128,30 @@
       height: 100%;
     }
 
-    /* ✅ Reduce the big blank space at the top of the transcript */
+    /* ✅ FIX do “grande espaço em branco”:
+       O WebChat usa justify-content:flex-end (mensagens no fundo). Forçamos topo. */
     #webchat, #webchat > * { height: 100% !important; }
-    #webchat .webchat__basic-transcript{ padding-top: 0 !important; }
-    #webchat .webchat__basic-transcript__transcript{ align-content: flex-start !important; }
+
+    /* Mantém o transcript no topo (mesmo com poucas mensagens) */
+    #webchat .webchat__basic-transcript__transcript,
+    #webchat [class*="basic-transcript__transcript"]{
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: flex-start !important;
+      align-content: flex-start !important;
+    }
+
+    /* Remove espaçamento extra no topo do transcript */
+    #webchat .webchat__basic-transcript,
+    #webchat [class*="webchat__basic-transcript"]{
+      padding-top: 0 !important;
+      margin-top: 0 !important;
+    }
 
     /* Mobile */
     @media (max-width: 980px){
-      .page{
-        grid-template-columns: 1fr;
-      }
-      .chatBody{
-        height: 70vh;
-        min-height: 520px;
-      }
+      .page{ grid-template-columns: 1fr; }
+      .chatBody{ height: 70vh; min-height: 520px; }
     }
 
     @media (max-width: 520px){
@@ -159,14 +167,10 @@
     <!-- LEFT: Landing -->
     <section class="brandCard">
       <div class="brandInner">
-        <img class="eventLogo" src="/event-logo.png?v=3" alt="LM2026 - Driving Transformation" />
-
+        <img class="eventLogo" src="/event-logo.png?v=4" alt="LM2026 - Driving Transformation" />
         <h1>LM2026 — Bot Drive Transformation</h1>
 
-        <!-- One sentence only (PT or EN), set by JS -->
         <p class="subtitle" id="subtitle"></p>
-
-        <!-- Examples (PT or EN), set by JS -->
         <div class="hint" id="examples"></div>
       </div>
     </section>
@@ -175,7 +179,7 @@
     <section class="chatCard" id="chat-card">
       <div class="chatHeader">
         <div class="chatTitle">
-          <img src="/bot-icon.png?v=3" alt="Bot icon" />
+          <img src="/bot-icon.png?v=4" alt="Bot icon" />
           Bot Drive Transformation
         </div>
       </div>
@@ -186,11 +190,9 @@
   </main>
 
   <script>
-    // Token Endpoint (Copilot Studio → Web app channel → Token endpoint)
     const tokenEndpoint =
       "https://0f0a81529bbde17b958c1afc6ed2af.58.environment.api.powerplatform.com/powervirtualagents/botsbyschema/copilots_header_a2b4e/directline/token?api-version=2022-03-01-preview";
 
-    // ---------- Language (single sentence based on browser language) ----------
     function isPT() {
       const lang = (navigator.language || navigator.userLanguage || "en").toLowerCase();
       return lang.startsWith("pt");
@@ -209,14 +211,10 @@
       const examplesEN =
         'Examples: <b>“Where is the venue?”</b>, <b>“Who are the contacts?”</b>, <b>“What are the key dates and times?”</b>';
 
-      const subtitleEl = document.getElementById("subtitle");
-      const examplesEl = document.getElementById("examples");
-
-      if (subtitleEl) subtitleEl.textContent = pt ? subtitlePT : subtitleEN;
-      if (examplesEl) examplesEl.innerHTML = pt ? examplesPT : examplesEN;
+      document.getElementById("subtitle").textContent = pt ? subtitlePT : subtitleEN;
+      document.getElementById("examples").innerHTML = pt ? examplesPT : examplesEN;
     }
 
-    // ---------- WebChat ----------
     function showError(message) {
       const webchatEl = document.getElementById("webchat");
       if (!webchatEl) return;
@@ -228,41 +226,31 @@
 
     async function initWebChat() {
       try {
-        if (!window.WebChat) {
-          throw new Error("WebChat library não carregou (verifica bloqueios de rede/proxy).");
-        }
+        if (!window.WebChat) throw new Error("WebChat library não carregou.");
 
         const tokenUrl = new URL(tokenEndpoint);
         const apiVersion = tokenUrl.searchParams.get("api-version");
         const environmentEndPoint = tokenEndpoint.slice(0, tokenEndpoint.indexOf("/powervirtualagents"));
 
-        if (!apiVersion || !environmentEndPoint.includes("environment.api.powerplatform.com")) {
-          throw new Error("Token Endpoint inválido (api-version em falta ou domínio inesperado).");
-        }
-
-        // 1) Direct Line regional
         const regionalUrl = `${environmentEndPoint}/powervirtualagents/regionalchannelsettings?api-version=${apiVersion}`;
         const regionalResp = await fetch(regionalUrl);
         if (!regionalResp.ok) throw new Error(`regionalchannelsettings falhou: HTTP ${regionalResp.status}`);
 
         const regional = await regionalResp.json();
         const directLineBase = regional?.channelUrlsById?.directline;
-        if (!directLineBase) throw new Error("regionalchannelsettings não devolveu channelUrlsById.directline");
+        if (!directLineBase) throw new Error("regionalchannelsettings não devolveu directline URL.");
 
-        // 2) Token
         const tokenResp = await fetch(tokenEndpoint);
         if (!tokenResp.ok) throw new Error(`token endpoint falhou: HTTP ${tokenResp.status}`);
 
         const conversationInfo = await tokenResp.json();
-        if (!conversationInfo.token) throw new Error("Resposta do token endpoint não contém 'token'.");
+        if (!conversationInfo.token) throw new Error("Resposta do token endpoint não contém token.");
 
-        // 3) Domínio final
         const directLineDomain = new URL("v3/directline", directLineBase).toString();
 
-        // 4) Style options (bot icon + avatar)
         const styleOptions = {
           accent: "#0b6a77",
-          botAvatarImage: `${window.location.origin}/bot-icon.png?v=3`,
+          botAvatarImage: `${window.location.origin}/bot-icon.png?v=4`,
           botAvatarInitials: "DT",
           userAvatarInitials: "U",
           showAvatarInGroup: true,
@@ -271,7 +259,6 @@
           bubbleFromUserBorderRadius: 18
         };
 
-        // 5) Enviar evento para disparar a saudação
         let greetingSent = false;
         const store = window.WebChat.createStore(
           {},
@@ -296,19 +283,13 @@
         });
 
         window.WebChat.renderWebChat(
-          {
-            directLine,
-            store,
-            locale: navigator.language || "pt-PT",
-            styleOptions
-          },
+          { directLine, store, locale: navigator.language || "pt-PT", styleOptions },
           document.getElementById("webchat")
         );
 
-        // ✅ Focus input + force transcript scroll (reduces "blank" initial view)
+        // foco no input
         setTimeout(() => {
           document.querySelector("#webchat input")?.focus();
-          document.querySelector('[role="log"]')?.scrollTo(0, 999999);
         }, 650);
 
       } catch (e) {
