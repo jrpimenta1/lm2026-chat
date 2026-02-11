@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-PT">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -54,6 +54,7 @@
       text-align: left;
     }
 
+    /* Centered event logo */
     .eventLogo{
       width: 320px;
       max-width: 100%;
@@ -65,17 +66,25 @@
     }
 
     h1{
-      margin: 14px 0 8px 0;
+      margin: 14px 0 10px 0;
       font-size: 28px;
       line-height: 1.15;
       letter-spacing: .2px;
     }
 
     .subtitle{
-      margin:0 0 16px 0;
+      margin:0 0 10px 0;
       color: var(--muted);
       font-size: 15px;
       line-height: 1.45;
+    }
+
+    .powered{
+      margin:0 0 16px 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+      font-weight: 600;
     }
 
     .hint{
@@ -85,6 +94,7 @@
       line-height: 1.45;
     }
 
+    /* Chat card */
     .chatHeader{
       height: 56px;
       display:flex;
@@ -118,11 +128,9 @@
     }
 
     #webchat{ height: 100%; }
-
-    /* Garante que o WebChat ocupa a altura toda */
     #webchat, #webchat > * { height: 100% !important; }
 
-    /* Remove padding/margens estranhas em algumas builds */
+    /* Remove extra top padding/margins if present */
     #webchat .webchat__basic-transcript,
     #webchat [class*="webchat__basic-transcript"],
     #webchat [class*="basic-transcript"]{
@@ -130,21 +138,7 @@
       margin-top: 0 !important;
     }
 
-    /* Build stamp */
-    .buildStamp{
-      position: fixed;
-      left: 10px;
-      bottom: 10px;
-      font-size: 12px;
-      color: rgba(2, 6, 23, .55);
-      background: rgba(255,255,255,.65);
-      border: 1px solid rgba(2, 6, 23, .12);
-      border-radius: 10px;
-      padding: 6px 10px;
-      backdrop-filter: blur(6px);
-      user-select: none;
-    }
-
+    /* Mobile */
     @media (max-width: 980px){
       .page{ grid-template-columns: 1fr; }
       .chatBody{ height: 70vh; min-height: 520px; }
@@ -160,68 +154,49 @@
 
 <body>
   <main class="page">
+    <!-- LEFT: Landing -->
     <section class="brandCard">
       <div class="brandInner">
-        <img class="eventLogo" src="/event-logo.png?v=20" alt="LM2026 - Driving Transformation" />
+        <img class="eventLogo" src="/event-logo.png?v=1" alt="LM2026 - Event logo" />
         <h1>LM2026 — Bot Drive Transformation</h1>
-        <p class="subtitle" id="subtitle"></p>
-        <div class="hint" id="examples"></div>
+
+        <p class="subtitle">
+          Assistant for the SODECIA internal event to support participants with information about logistics, agenda, contacts and content available in the event's knowledge base.
+        </p>
+        <p class="powered">Powered by AI SODECIA Lab.</p>
+
+        <div class="hint">
+          Examples:
+          <b>“Where is the venue?”</b>,
+          <b>“Who are the contacts?”</b>,
+          <b>“What are the key dates and times?”</b>,
+          <b>“Which are transfers for the event?”</b>,
+          <b>“Which are the BUS sitting definitions?”</b>,
+          etc.
+        </div>
       </div>
     </section>
 
+    <!-- RIGHT: Chat -->
     <section class="chatCard">
       <div class="chatHeader">
         <div class="chatTitle">
-          <img src="/bot-icon.png?v=20" alt="Bot icon" />
+          <img src="/bot-icon.png?v=1" alt="Bot icon" />
           Bot Drive Transformation
         </div>
       </div>
-
       <div class="chatBody">
         <div id="webchat" role="main"></div>
       </div>
     </section>
   </main>
 
-  <div class="buildStamp" id="buildStamp"></div>
-
   <script>
-    // ==== BUILD (para confirmares que o deploy tem este ficheiro) ====
-    const BUILD = "LM2026-build-2026-02-11-HYBRID-3";
-    document.getElementById("buildStamp").textContent = BUILD;
-
-    // ==== Token endpoint (o teu) ====
+    // Token Endpoint (Copilot Studio → Web app channel → Token endpoint)
     const tokenEndpoint =
       "https://0f0a81529bbde17b958c1afc6ed2af.58.environment.api.powerplatform.com/powervirtualagents/botsbyschema/copilots_header_a2b4e/directline/token?api-version=2022-03-01-preview";
 
-    // ==== Texto PT/EN consoante idioma do browser ====
-    function isPT() {
-      const lang = (navigator.language || navigator.userLanguage || "en").toLowerCase();
-      return lang.startsWith("pt");
-    }
-
-    function setLandingText() {
-      const pt = isPT();
-
-      const subtitlePT =
-        "Assistente do evento interno da SODECIA para apoiar os participantes com informações sobre logística, agenda, contactos e conteúdos disponíveis nabase de conhecimento do evento.</br> 
-        Powered by AI SODECIA Lab.
-";
-      const subtitleEN =
-        "Assistant for the SODECIA internal event to support participants with information about logistics, agenda, contacts and content available in the event's knowledge base.</br> 
-        Powered by AI SODECIA Lab.
-";
-
-      const examplesPT =
-        'Exemplos: <b>“Onde é o local?”</b>, <b>“Quem são os contactos?”</b>, <b>“Quais são as datas e horas?”</b>';
-      const examplesEN =
-        'Examples: <b>“Where is the venue?”</b>, <b>“Who are the contacts?”</b>, <b>“What are the key dates and times?”</b>';
-
-      document.getElementById("subtitle").textContent = pt ? subtitlePT : subtitleEN;
-      document.getElementById("examples").innerHTML = pt ? examplesPT : examplesEN;
-    }
-
-    // ==== FIX ROBUSTO: encontrar e neutralizar "bottom anchoring" em qualquer versão do WebChat ====
+    // -------- Robust “hybrid” transcript fix (reduces big blank space on top) --------
 
     function getScrollableCandidates(root) {
       const nodes = Array.from(root.querySelectorAll("*"));
@@ -246,7 +221,6 @@
         if ((cs.flexDirection || "").toLowerCase() !== "column") continue;
         if ((cs.justifyContent || "").toLowerCase() !== "flex-end") continue;
 
-        // Este é EXACTAMENTE o tipo de container que cria o "vazio gigante"
         el.style.setProperty("justify-content", "flex-start", "important");
         el.style.setProperty("align-content", "flex-start", "important");
       }
@@ -264,22 +238,16 @@
         const root = document.getElementById("webchat");
         if (!root) return;
 
-        // 1) Mata o "anchor ao fundo" seja qual for o container
         forceTopAlignmentOnAllFlexEndColumns(root);
 
-        // 2) Selecciona o scroller real (para decidir "cabe vs overflow")
         const scroller = pickScroller(root);
-
-        // Se não encontrarmos scroller ainda, tentamos de novo no próximo tick
         if (!scroller) return;
 
         const hasOverflow = scroller.scrollHeight > (scroller.clientHeight + 6);
 
         if (!hasOverflow) {
-          // Poucas mensagens: topo, sem vazio
           scroller.scrollTop = 0;
         } else {
-          // Muitas mensagens: comportamento de chat normal (mostra o fim)
           scroller.scrollTop = scroller.scrollHeight;
         }
       });
@@ -290,7 +258,6 @@
       if (!root) return;
 
       const obs = new MutationObserver(() => {
-        // WebChat actualiza em múltiplos passos
         applyHybrid();
         requestAnimationFrame(applyHybrid);
         setTimeout(applyHybrid, 120);
@@ -300,7 +267,6 @@
 
       window.addEventListener("resize", () => setTimeout(applyHybrid, 120));
 
-      // arranque (quando o DOM do WebChat ainda está a “assentar”)
       setTimeout(() => {
         applyHybrid();
         requestAnimationFrame(applyHybrid);
@@ -308,10 +274,11 @@
       }, 900);
     }
 
-    // ==== WebChat init ====
+    // -------- WebChat init --------
 
     function showError(message) {
       const webchatEl = document.getElementById("webchat");
+      if (!webchatEl) return;
       webchatEl.innerHTML =
         `<div style="padding:12px;font:14px system-ui;color:#b91c1c;">
           <b>WebChat error</b><br/>${message}
@@ -320,31 +287,34 @@
 
     async function initWebChat() {
       try {
-        if (!window.WebChat) throw new Error("WebChat library não carregou.");
+        if (!window.WebChat) throw new Error("WebChat library did not load.");
 
         const tokenUrl = new URL(tokenEndpoint);
         const apiVersion = tokenUrl.searchParams.get("api-version");
         const environmentEndPoint = tokenEndpoint.slice(0, tokenEndpoint.indexOf("/powervirtualagents"));
 
+        // 1) Direct Line regional URL
         const regionalUrl = `${environmentEndPoint}/powervirtualagents/regionalchannelsettings?api-version=${apiVersion}`;
         const regionalResp = await fetch(regionalUrl);
-        if (!regionalResp.ok) throw new Error(`regionalchannelsettings falhou: HTTP ${regionalResp.status}`);
-
+        if (!regionalResp.ok) throw new Error(`regionalchannelsettings failed: HTTP ${regionalResp.status}`);
         const regional = await regionalResp.json();
+
         const directLineBase = regional?.channelUrlsById?.directline;
-        if (!directLineBase) throw new Error("regionalchannelsettings não devolveu channelUrlsById.directline");
+        if (!directLineBase) throw new Error("regionalchannelsettings did not return channelUrlsById.directline");
 
+        // 2) Token
         const tokenResp = await fetch(tokenEndpoint);
-        if (!tokenResp.ok) throw new Error(`token endpoint falhou: HTTP ${tokenResp.status}`);
-
+        if (!tokenResp.ok) throw new Error(`token endpoint failed: HTTP ${tokenResp.status}`);
         const conversationInfo = await tokenResp.json();
-        if (!conversationInfo.token) throw new Error("Resposta do token endpoint não contém 'token'.");
+        if (!conversationInfo.token) throw new Error("Token response missing 'token'.");
 
+        // 3) Final domain
         const directLineDomain = new URL("v3/directline", directLineBase).toString();
 
+        // 4) Style options (bot icon)
         const styleOptions = {
           accent: "#0b6a77",
-          botAvatarImage: `${window.location.origin}/bot-icon.png?v=20`,
+          botAvatarImage: `${window.location.origin}/bot-icon.png?v=1`,
           botAvatarInitials: "DT",
           userAvatarInitials: "U",
           showAvatarInGroup: true,
@@ -353,6 +323,7 @@
           bubbleFromUserBorderRadius: 18
         };
 
+        // 5) Send event to trigger greeting
         let greetingSent = false;
 
         const store = window.WebChat.createStore(
@@ -366,12 +337,11 @@
                 type: "WEB_CHAT/SEND_EVENT",
                 payload: {
                   name: "startConversation",
-                  value: { locale: navigator.language || "pt-PT" }
+                  value: { locale: navigator.language || "en-US" }
                 }
               });
             }
 
-            // Re-aplica fix a cada actividade
             if (
               action.type === "DIRECT_LINE/INCOMING_ACTIVITY" ||
               action.type === "DIRECT_LINE/POST_ACTIVITY_FULFILLED" ||
@@ -391,7 +361,12 @@
         });
 
         window.WebChat.renderWebChat(
-          { directLine, store, locale: navigator.language || "pt-PT", styleOptions },
+          {
+            directLine,
+            store,
+            locale: navigator.language || "en-US",
+            styleOptions
+          },
           document.getElementById("webchat")
         );
 
@@ -409,11 +384,8 @@
     }
 
     window.addEventListener("load", () => {
-      setLandingText();
       initWebChat();
     });
   </script>
 </body>
 </html>
-
-
