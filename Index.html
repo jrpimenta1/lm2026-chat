@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>LM2026 | Bot Drive Transformation</title>
+
+  <!-- Bot Framework Web Chat -->
+  <script src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
+
+  <style>
+    :root{
+      --primary:#0b6a77;
+      --onPrimary:#ffffff;
+      --shadow: 0 18px 40px -5px rgba(0,0,0,.20), 0 15px 20px -5px rgba(0,0,0,.10);
+      --radius: 16px;
+      --w: 420px;
+      --h: 560px;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body{ margin:0; background:#f3f4f6; min-height:100vh; }
+
+    #open-chat{
+      position:fixed; right:24px; bottom:24px;
+      width:56px; height:56px; border-radius:999px;
+      border:0; background:var(--primary); color:var(--onPrimary);
+      box-shadow:var(--shadow); cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      z-index:1000;
+    }
+    #open-chat.hidden{ display:none; }
+
+    #chat-popup{
+      position:fixed; right:24px; bottom:96px;
+      width:var(--w); height:var(--h);
+      background:white; border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      display:none;
+      z-index:1000;
+    }
+    #chat-popup.visible{ display:block; }
+
+    #chat-header{
+      height:56px;
+      background:var(--primary);
+      color:var(--onPrimary);
+      display:flex; align-items:center; justify-content:space-between;
+      padding:0 14px;
+    }
+    #chat-title{ display:flex; gap:10px; align-items:center; font-weight:600; }
+    #chat-title img{ width:22px; height:22px; border-radius:6px; background:#fff; }
+    #close-chat{
+      background:transparent; border:0; color:var(--onPrimary);
+      cursor:pointer; font-size:20px; line-height:20px;
+      padding:6px 10px; border-radius:10px;
+    }
+    #close-chat:hover{ background: rgba(255,255,255,.12); }
+
+    #webchat{ height: calc(var(--h) - 56px); }
+
+    /* Mobile: fullscreen */
+    @media (max-width: 520px){
+      #chat-popup{
+        right:0; bottom:0; width:100vw; height:100vh; border-radius:0;
+      }
+      #webchat{ height: calc(100vh - 56px); }
+    }
+  </style>
+</head>
+
+<body>
+  <button id="open-chat" aria-label="Abrir chat">💬</button>
+
+  <div id="chat-popup" role="dialog" aria-label="Chat LM2026">
+    <div id="chat-header">
+      <div id="chat-title">
+        <img src="bot-icon.png" alt="Bot icon" />
+        Bot Drive Transformation
+      </div>
+      <button id="close-chat" aria-label="Fechar chat">×</button>
+    </div>
+    <div id="webchat" role="main"></div>
+  </div>
+
+  <script>
+    // Token Endpoint (Copilot Studio → Web app / Email token endpoint conforme a tua configuração)
+    const tokenEndpoint =
+      "https://0f0a81529bbde17b958c1afc6ed2af.58.environment.api.powerplatform.com/powervirtualagents/botsbyschema/copilots_header_a2b4e/directline/token?api-version=2022-03-01-preview";
+
+    let webchatInitialised = false;
+
+    function showError(message) {
+      const webchatEl = document.getElementById("webchat");
+      webchatEl.innerHTML =
+        `<div style="padding:12px;font:14px system-ui;color:#b91c1c;">
+          <b>WebChat error</b><br/>${message}
+        </div>`;
+    }
+
+    async function initWebChat() {
+      try {
+        if (!window.WebChat) {
+          throw new Error("WebChat library não carregou (verifica bloqueios de rede/proxy).");
+        }
+
+        const tokenUrl = new URL(tokenEndpoint);
+        const apiVersion = tokenUrl.searchParams.get("api-version");
+        const environmentEndPoint = tokenEndpoint.slice(0, tokenEndpoint.indexOf("/powervirtualagents"));
+
+        if (!apiVersion || !environmentEndPoint.includes("environment.api.powerplatform.com")) {
+          throw new Error("Token Endpoint inválido (api-version em falta ou domínio inesperado).");
+        }
+
+        // 1) Obter Direct Line regional
+        const regionalUrl = `${environmentEndPoint}/powervirtualagents/regionalchannelsettings?api-version=${apiVersion}`;
+        const regionalResp = await fetch(regionalUrl);
+        if (!regionalResp.ok) throw new Error(`regionalchannelsettings falhou: HTTP ${regionalResp.status}`);
+
+        const regional = await regionalResp.json();
+        const directLineBase = regional?.channelUrlsById?.directline;
+        if (!directLineBase) throw new Error("regionalchannelsettings não devolveu channelUrlsById.directline");
+
+        // 2) Obter token de conversa
+        const tokenResp = await fetch(tokenEndpoint);
+        if (!tokenResp.ok) throw new Error(`token endpoint falhou: HTTP ${tokenResp.status}`);
+
+        const conversationInfo = await tokenResp.json();
+        if (!conversationInfo.token) throw new Error("Resposta do token endpoint não contém 'token'.");
+
+        // 3) Construir domínio Direct Line
+        const directLineDomain = new URL("v3/directline", directLineBase).toString();
+
+        // 4) Estilos (avatar/ícone garantido)
+        const styleOptions = {
+          accent: "#0b6a77",
+          botAvatarImage: `${window.location.origin}/bot-icon.png`,
+          botAvatarInitials: "DT",
+          userAvatarInitials: "U",
+          showAvatarInGroup: true,
+          avatarSize: 36,
+          bubbleBorderRadius: 18,
+          bubbleFromUserBorderRadius: 18
+        };
+
+        // 5) Store: envia evento de arranque para tentar disparar o greeting
+        let greetingSent = false;
+        const store = window.WebChat.createStore(
+          {},
+          () => next => action => {
+            if (action.type === "DIRECT_LINE/CONNECT_FULFILLED" && !greetingSent) {
+              greetingSent = true;
+
+              // Evento para iniciar conversa (o bot tem de ter um tópico a tratar este evento)
+              store.dispatch({
+                type: "WEB_CHAT/SEND_EVENT",
+                payload: {
+                  name: "startConversation",
+                  value: { locale: navigator.language || "pt-PT" }
+                }
+              });
+
+              // (Opcional) fallback se o teu bot não tratar eventos:
+              // store.dispatch({ type: "WEB_CHAT/SEND_MESSAGE", payload: { text: "hello" } });
+            }
+            return next(action);
+          }
+        );
+
+        const directLine = window.WebChat.createDirectLine({
+          domain: directLineDomain,
+          token: conversationInfo.token
+        });
+
+        window.WebChat.renderWebChat(
+          {
+            directLine,
+            store,
+            locale: navigator.language || "pt-PT",
+            styleOptions
+          },
+          document.getElementById("webchat")
+        );
+
+        setTimeout(() => {
+          document.querySelector("#webchat input")?.focus();
+        }, 400);
+
+      } catch (e) {
+        console.error(e);
+        showError(String(e.message || e));
+      }
+    }
+
+    // UI open/close
+    const openBtn = document.getElementById("open-chat");
+    const closeBtn = document.getElementById("close-chat");
+    const popup = document.getElementById("chat-popup");
+
+    openBtn.addEventListener("click", async () => {
+      popup.classList.add("visible");
+      openBtn.classList.add("hidden");
+
+      if (!webchatInitialised) {
+        await initWebChat();
+        webchatInitialised = true;
+      }
+    });
+
+    closeBtn.addEventListener("click", () => {
+      popup.classList.remove("visible");
+      openBtn.classList.remove("hidden");
+    });
+  </script>
+</body>
+</html>
