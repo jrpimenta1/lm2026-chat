@@ -5,16 +5,12 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>LM2026 | Bot Drive Transformation</title>
 
-  <!-- Favicon -->
   <link rel="icon" href="/bot-icon.png" />
-
-  <!-- Bot Framework Web Chat -->
   <script src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
 
   <style>
     :root{
       --primary:#0b6a77;
-      --primary2:#0f8a9a;
       --bg:#f4f6f8;
       --card:#ffffff;
       --text:#0f172a;
@@ -58,7 +54,6 @@
       text-align: left;
     }
 
-    /* Logo centrado */
     .eventLogo{
       width: 320px;
       max-width: 100%;
@@ -90,7 +85,7 @@
       line-height: 1.45;
     }
 
-    /* Chat card */
+    /* Chat */
     .chatHeader{
       height: 56px;
       display:flex;
@@ -124,31 +119,26 @@
       background:#fff;
     }
 
-    #webchat{
-      height: 100%;
-    }
+    #webchat{ height: 100%; }
 
-    /* ✅ FIX do “grande espaço em branco”:
-       O WebChat usa justify-content:flex-end (mensagens no fundo). Forçamos topo. */
+    /* Ensure WebChat fills container */
     #webchat, #webchat > * { height: 100% !important; }
 
-    /* Mantém o transcript no topo (mesmo com poucas mensagens) */
-    #webchat .webchat__basic-transcript__transcript,
-    #webchat [class*="basic-transcript__transcript"]{
-      display: flex !important;
-      flex-direction: column !important;
-      justify-content: flex-start !important;
-      align-content: flex-start !important;
-    }
-
-    /* Remove espaçamento extra no topo do transcript */
+    /* Reduce any extra top padding */
     #webchat .webchat__basic-transcript,
-    #webchat [class*="webchat__basic-transcript"]{
+    #webchat [class*="webchat__basic-transcript"],
+    #webchat [class*="basic-transcript"]{
       padding-top: 0 !important;
       margin-top: 0 !important;
     }
 
-    /* Mobile */
+    /* We will control alignment dynamically via JS (hybrid) */
+    #webchat [role="log"]{
+      display:flex !important;
+      flex-direction: column !important;
+      align-content: flex-start !important;
+    }
+
     @media (max-width: 980px){
       .page{ grid-template-columns: 1fr; }
       .chatBody{ height: 70vh; min-height: 520px; }
@@ -164,22 +154,19 @@
 
 <body>
   <main class="page">
-    <!-- LEFT: Landing -->
     <section class="brandCard">
       <div class="brandInner">
-        <img class="eventLogo" src="/event-logo.png?v=4" alt="LM2026 - Driving Transformation" />
+        <img class="eventLogo" src="/event-logo.png?v=6" alt="LM2026 - Driving Transformation" />
         <h1>LM2026 — Bot Drive Transformation</h1>
-
         <p class="subtitle" id="subtitle"></p>
         <div class="hint" id="examples"></div>
       </div>
     </section>
 
-    <!-- RIGHT: Chat -->
     <section class="chatCard" id="chat-card">
       <div class="chatHeader">
         <div class="chatTitle">
-          <img src="/bot-icon.png?v=4" alt="Bot icon" />
+          <img src="/bot-icon.png?v=6" alt="Bot icon" />
           Bot Drive Transformation
         </div>
       </div>
@@ -224,6 +211,32 @@
         </div>`;
     }
 
+    // ✅ HYBRID behaviour:
+    // - If transcript content fits in view: align TOP (no big blank space)
+    // - If it overflows: align BOTTOM (normal chat)
+    function applyHybridTranscriptLayout() {
+      const log = document.querySelector("#webchat [role='log']");
+      if (!log) return;
+
+      // Force flex container
+      log.style.display = "flex";
+      log.style.flexDirection = "column";
+      log.style.alignContent = "flex-start";
+
+      // Determine if content fits in viewport
+      const fits = log.scrollHeight <= (log.clientHeight + 4);
+
+      if (fits) {
+        // Few messages -> start at top
+        log.style.justifyContent = "flex-start";
+        log.scrollTop = 0;
+      } else {
+        // Many messages -> behave like normal chat (bottom)
+        log.style.justifyContent = "flex-end";
+        log.scrollTop = log.scrollHeight;
+      }
+    }
+
     async function initWebChat() {
       try {
         if (!window.WebChat) throw new Error("WebChat library não carregou.");
@@ -250,7 +263,7 @@
 
         const styleOptions = {
           accent: "#0b6a77",
-          botAvatarImage: `${window.location.origin}/bot-icon.png?v=4`,
+          botAvatarImage: `${window.location.origin}/bot-icon.png?v=6`,
           botAvatarInitials: "DT",
           userAvatarInitials: "U",
           showAvatarInGroup: true,
@@ -260,9 +273,12 @@
         };
 
         let greetingSent = false;
+
         const store = window.WebChat.createStore(
           {},
           () => next => action => {
+            const result = next(action);
+
             if (action.type === "DIRECT_LINE/CONNECT_FULFILLED" && !greetingSent) {
               greetingSent = true;
               store.dispatch({
@@ -273,7 +289,17 @@
                 }
               });
             }
-            return next(action);
+
+            // After any activity, re-apply hybrid layout
+            if (
+              action.type === "DIRECT_LINE/INCOMING_ACTIVITY" ||
+              action.type === "DIRECT_LINE/POST_ACTIVITY_FULFILLED" ||
+              action.type === "DIRECT_LINE/CONNECT_FULFILLED"
+            ) {
+              setTimeout(applyHybridTranscriptLayout, 60);
+            }
+
+            return result;
           }
         );
 
@@ -287,10 +313,15 @@
           document.getElementById("webchat")
         );
 
-        // foco no input
+        // Initial layout + keep it correct on resize
         setTimeout(() => {
+          applyHybridTranscriptLayout();
           document.querySelector("#webchat input")?.focus();
-        }, 650);
+        }, 700);
+
+        window.addEventListener("resize", () => {
+          setTimeout(applyHybridTranscriptLayout, 100);
+        });
 
       } catch (e) {
         console.error(e);
