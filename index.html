@@ -149,15 +149,12 @@
         <img class="eventLogo" src="/event-logo.png" alt="LM2026 - Driving Transformation" />
 
         <h1>LM2026 — Bot Drive Transformation</h1>
-        <p class="subtitle">
-          <strong>PT:</strong> Assistente do evento interno da SODECIA para apoiar participantes com informações sobre logística, agenda, contactos e conteúdos disponíveis na base de conhecimento do evento.<br>
-          <strong>EN:</strong> Assistant for the SODECIA internal event to support participants with information about logistics, agenda, contacts and content available in the event's knowledge base.
-        </p>
 
-        <div class="hint">
-          Exemplos: <b>“Onde é o local?”</b>, <b>“Quem são os contactos?”</b>, <b>“Quais são as datas e horas?”</b>
-          Examples: <b>“Where is the location?”</b>, <b>“Who are the contacts?”</b>, <b>“What are the dates and times?”</b>
-        </div>
+        <!-- One sentence only (PT or EN), set by JS -->
+        <p class="subtitle" id="subtitle"></p>
+
+        <!-- Examples (PT or EN), set by JS -->
+        <div class="hint" id="examples"></div>
       </div>
     </section>
 
@@ -180,8 +177,36 @@
     const tokenEndpoint =
       "https://0f0a81529bbde17b958c1afc6ed2af.58.environment.api.powerplatform.com/powervirtualagents/botsbyschema/copilots_header_a2b4e/directline/token?api-version=2022-03-01-preview";
 
+    // ---------- Language (single sentence based on browser language) ----------
+    function isPT() {
+      const lang = (navigator.language || navigator.userLanguage || "en").toLowerCase();
+      return lang.startsWith("pt");
+    }
+
+    function setLandingText() {
+      const pt = isPT();
+
+      const subtitlePT =
+        "Assistente do evento interno da SODECIA para apoiar participantes com informações sobre logística, agenda, contactos e conteúdos disponíveis na base de conhecimento do evento.";
+      const subtitleEN =
+        "Assistant for the SODECIA internal event to support participants with information about logistics, agenda, contacts and content available in the event's knowledge base.";
+
+      const examplesPT =
+        'Exemplos: <b>“Onde é o local?”</b>, <b>“Quem são os contactos?”</b>, <b>“Quais são as datas e horas?”</b>';
+      const examplesEN =
+        'Examples: <b>“Where is the venue?”</b>, <b>“Who are the contacts?”</b>, <b>“What are the key dates and times?”</b>';
+
+      const subtitleEl = document.getElementById("subtitle");
+      const examplesEl = document.getElementById("examples");
+
+      if (subtitleEl) subtitleEl.textContent = pt ? subtitlePT : subtitleEN;
+      if (examplesEl) examplesEl.innerHTML = pt ? examplesPT : examplesEN;
+    }
+
+    // ---------- WebChat ----------
     function showError(message) {
       const webchatEl = document.getElementById("webchat");
+      if (!webchatEl) return;
       webchatEl.innerHTML =
         `<div style="padding:12px;font:14px system-ui;color:#b91c1c;">
           <b>WebChat error</b><br/>${message}
@@ -278,12 +303,10 @@
       }
     }
 
-    // Iniciar chat automaticamente ao carregar
     window.addEventListener("load", () => {
+      setLandingText();
       initWebChat();
     });
   </script>
 </body>
 </html>
-
-
