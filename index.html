@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>LM2026 | Bot Drive Transformation</title>
 
-  <!-- Favicon (usa o mesmo ícone do bot) -->
+  <!-- Favicon -->
   <link rel="icon" href="/bot-icon.png" />
 
   <!-- Bot Framework Web Chat -->
@@ -14,85 +14,233 @@
   <style>
     :root{
       --primary:#0b6a77;
-      --onPrimary:#ffffff;
+      --primary2:#0f8a9a;
+      --bg:#f4f6f8;
+      --card:#ffffff;
+      --text:#0f172a;
+      --muted:#475569;
+      --border:rgba(15, 23, 42, .10);
       --shadow: 0 18px 40px -5px rgba(0,0,0,.20), 0 15px 20px -5px rgba(0,0,0,.10);
-      --radius: 16px;
-      --w: 420px;
-      --h: 560px;
+      --radius: 18px;
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     }
 
-    body{ margin:0; background:#f3f4f6; min-height:100vh; }
-
-    #open-chat{
-      position:fixed; right:24px; bottom:24px;
-      width:56px; height:56px; border-radius:999px;
-      border:0; background:var(--primary); color:var(--onPrimary);
-      box-shadow:var(--shadow); cursor:pointer;
-      display:flex; align-items:center; justify-content:center;
-      z-index:1000;
+    body{
+      margin:0;
+      min-height:100vh;
+      background:
+        radial-gradient(1200px 600px at 15% 10%, rgba(11,106,119,.18), transparent 60%),
+        radial-gradient(900px 500px at 85% 30%, rgba(15,138,154,.14), transparent 60%),
+        var(--bg);
+      color:var(--text);
     }
-    #open-chat.hidden{ display:none; }
 
-    #chat-popup{
-      position:fixed; right:24px; bottom:96px;
-      width:var(--w); height:var(--h);
-      background:white; border-radius:var(--radius);
-      box-shadow:var(--shadow);
-      overflow:hidden;
-      display:none;
-      z-index:1000;
+    .page{
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 28px 18px;
+      display: grid;
+      grid-template-columns: 1fr 520px;
+      gap: 22px;
+      align-items: start;
     }
-    #chat-popup.visible{ display:block; }
 
-    #chat-header{
-      height:56px;
-      background:var(--primary);
-      color:var(--onPrimary);
-      display:flex; align-items:center; justify-content:space-between;
-      padding:0 14px;
+    .brandCard, .chatCard{
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
     }
-    #chat-title{ display:flex; gap:10px; align-items:center; font-weight:600; }
-    #chat-title img{ width:22px; height:22px; border-radius:6px; background:#fff; }
-    #close-chat{
-      background:transparent; border:0; color:var(--onPrimary);
-      cursor:pointer; font-size:20px; line-height:20px;
-      padding:6px 10px; border-radius:10px;
+
+    .brandInner{
+      padding: 22px 22px 18px 22px;
     }
-    #close-chat:hover{ background: rgba(255,255,255,.12); }
 
-    #webchat{ height: calc(var(--h) - 56px); }
+    .logoRow{
+      display:flex;
+      align-items:center;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
 
-    /* Mobile: fullscreen */
-    @media (max-width: 520px){
-      #chat-popup{
-        right:0; bottom:0; width:100vw; height:100vh; border-radius:0;
+    .eventLogo{
+      width: 260px;
+      max-width: 100%;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      display:block;
+      background:#fff;
+    }
+
+    h1{
+      margin: 14px 0 8px 0;
+      font-size: 28px;
+      line-height: 1.15;
+      letter-spacing: .2px;
+    }
+
+    .subtitle{
+      margin:0 0 16px 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.45;
+    }
+
+    .chips{
+      display:flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 14px 0 18px 0;
+    }
+
+    .chip{
+      font-size: 12px;
+      color: #0b2f36;
+      background: rgba(11,106,119,.12);
+      border: 1px solid rgba(11,106,119,.18);
+      border-radius: 999px;
+      padding: 6px 10px;
+      white-space: nowrap;
+    }
+
+    .ctaRow{
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .btn{
+      appearance:none;
+      border:0;
+      cursor:pointer;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .btnPrimary{
+      background: linear-gradient(135deg, var(--primary), var(--primary2));
+      color: #fff;
+      box-shadow: 0 10px 24px rgba(11,106,119,.24);
+    }
+
+    .btnGhost{
+      background: rgba(2, 6, 23, .04);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .hint{
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    /* Chat card */
+    .chatHeader{
+      height: 56px;
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      padding: 0 14px;
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .chatTitle{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      font-weight: 700;
+    }
+
+    .chatTitle img{
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      background: #fff;
+    }
+
+    .chatBody{
+      height: 660px; /* desktop default */
+      background:#fff;
+    }
+
+    #webchat{
+      height: 100%;
+    }
+
+    /* Mobile */
+    @media (max-width: 980px){
+      .page{
+        grid-template-columns: 1fr;
       }
-      #webchat{ height: calc(100vh - 56px); }
+      .chatBody{
+        height: 70vh;
+        min-height: 520px;
+      }
+    }
+
+    @media (max-width: 520px){
+      .brandInner{ padding: 18px; }
+      .chatBody{ min-height: 520px; height: 72vh; }
+      h1{ font-size: 24px; }
     }
   </style>
 </head>
 
 <body>
-  <button id="open-chat" aria-label="Abrir chat">💬</button>
+  <main class="page">
+    <!-- LEFT: Landing -->
+    <section class="brandCard">
+      <div class="brandInner">
+        <img class="eventLogo" src="/event-logo.png" alt="LM2026 - Driving Transformation" />
 
-  <div id="chat-popup" role="dialog" aria-label="Chat LM2026">
-    <div id="chat-header">
-      <div id="chat-title">
-        <img src="bot-icon.png" alt="Bot icon" />
-        Bot Drive Transformation
+        <h1>LM2026 — Bot Drive Transformation</h1>
+        <p class="subtitle">
+          Assistente do evento interno da SODECIA para apoiar participantes com informações sobre logística,
+          agenda, contactos e conteúdos disponíveis na base de conhecimento do evento.
+        </p>
+
+        <div class="chips">
+          <span class="chip">Sem autenticação (público)</span>
+          <span class="chip">PT / EN / DE / FR / ES</span>
+          <span class="chip">Respostas com base em knowledge base</span>
+        </div>
+
+        <div class="ctaRow">
+          <button class="btn btnPrimary" id="focus-chat" type="button">Abrir chat</button>
+          <button class="btn btnGhost" id="scroll-chat" type="button">Ir para o chat</button>
+        </div>
+
+        <div class="hint">
+          Exemplos: <b>“Onde é o local?”</b>, <b>“Quem são os contactos?”</b>, <b>“Quais são as datas e horas?”</b>
+        </div>
       </div>
-      <button id="close-chat" aria-label="Fechar chat">×</button>
-    </div>
-    <div id="webchat" role="main"></div>
-  </div>
+    </section>
+
+    <!-- RIGHT: Chat -->
+    <section class="chatCard" id="chat-card">
+      <div class="chatHeader">
+        <div class="chatTitle">
+          <img src="/bot-icon.png" alt="Bot icon" />
+          Bot Drive Transformation
+        </div>
+      </div>
+      <div class="chatBody">
+        <div id="webchat" role="main"></div>
+      </div>
+    </section>
+  </main>
 
   <script>
     // Token Endpoint (Copilot Studio → Web app channel → Token endpoint)
     const tokenEndpoint =
       "https://0f0a81529bbde17b958c1afc6ed2af.58.environment.api.powerplatform.com/powervirtualagents/botsbyschema/copilots_header_a2b4e/directline/token?api-version=2022-03-01-preview";
-
-    let webchatInitialised = false;
 
     function showError(message) {
       const webchatEl = document.getElementById("webchat");
@@ -116,7 +264,7 @@
           throw new Error("Token Endpoint inválido (api-version em falta ou domínio inesperado).");
         }
 
-        // 1) Obter Direct Line regional
+        // 1) Direct Line regional
         const regionalUrl = `${environmentEndPoint}/powervirtualagents/regionalchannelsettings?api-version=${apiVersion}`;
         const regionalResp = await fetch(regionalUrl);
         if (!regionalResp.ok) throw new Error(`regionalchannelsettings falhou: HTTP ${regionalResp.status}`);
@@ -125,17 +273,17 @@
         const directLineBase = regional?.channelUrlsById?.directline;
         if (!directLineBase) throw new Error("regionalchannelsettings não devolveu channelUrlsById.directline");
 
-        // 2) Obter token de conversa
+        // 2) Token
         const tokenResp = await fetch(tokenEndpoint);
         if (!tokenResp.ok) throw new Error(`token endpoint falhou: HTTP ${tokenResp.status}`);
 
         const conversationInfo = await tokenResp.json();
         if (!conversationInfo.token) throw new Error("Resposta do token endpoint não contém 'token'.");
 
-        // 3) Construir domínio Direct Line
+        // 3) Domínio final
         const directLineDomain = new URL("v3/directline", directLineBase).toString();
 
-        // 4) Estilos (avatar/ícone garantido)
+        // 4) Style options (ícone sempre visível)
         const styleOptions = {
           accent: "#0b6a77",
           botAvatarImage: `${window.location.origin}/bot-icon.png`,
@@ -147,14 +295,13 @@
           bubbleFromUserBorderRadius: 18
         };
 
-        // 5) Store: envia evento de arranque para disparar a mensagem de boas-vindas
+        // 5) Enviar evento para disparar a saudação
         let greetingSent = false;
         const store = window.WebChat.createStore(
           {},
           () => next => action => {
             if (action.type === "DIRECT_LINE/CONNECT_FULFILLED" && !greetingSent) {
               greetingSent = true;
-
               store.dispatch({
                 type: "WEB_CHAT/SEND_EVENT",
                 payload: {
@@ -182,9 +329,10 @@
           document.getElementById("webchat")
         );
 
+        // foco no input
         setTimeout(() => {
           document.querySelector("#webchat input")?.focus();
-        }, 400);
+        }, 450);
 
       } catch (e) {
         console.error(e);
@@ -192,29 +340,19 @@
       }
     }
 
-    // UI open/close
-    const openBtn = document.getElementById("open-chat");
-    const closeBtn = document.getElementById("close-chat");
-    const popup = document.getElementById("chat-popup");
-
-    openBtn.addEventListener("click", async () => {
-      popup.classList.add("visible");
-      openBtn.classList.add("hidden");
-
-      if (!webchatInitialised) {
-        await initWebChat();
-        webchatInitialised = true;
-      }
+    // Landing buttons
+    document.getElementById("scroll-chat").addEventListener("click", () => {
+      document.getElementById("chat-card").scrollIntoView({ behavior: "smooth", block: "start" });
     });
 
-    closeBtn.addEventListener("click", () => {
-      popup.classList.remove("visible");
-      openBtn.classList.remove("hidden");
+    document.getElementById("focus-chat").addEventListener("click", () => {
+      document.getElementById("chat-card").scrollIntoView({ behavior: "smooth", block: "start" });
+      setTimeout(() => document.querySelector("#webchat input")?.focus(), 600);
     });
 
-    // ✅ Abrir automaticamente o chat ao carregar a página (opcional, mas útil para demo)
+    // Iniciar chat automaticamente ao carregar (boa UX)
     window.addEventListener("load", () => {
-      openBtn.click();
+      initWebChat();
     });
   </script>
 </body>
