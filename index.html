@@ -5,10 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>LM2026 | Bot Drive Transformation</title>
 
-  <!-- Favicon -->
   <link rel="icon" href="/bot-icon.png" />
-
-  <!-- Bot Framework Web Chat -->
   <script src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
 
   <style>
@@ -57,7 +54,6 @@
       text-align: left;
     }
 
-    /* Centered event logo */
     .eventLogo{
       width: 320px;
       max-width: 100%;
@@ -89,12 +85,10 @@
       line-height: 1.45;
     }
 
-    /* Chat card */
     .chatHeader{
       height: 56px;
       display:flex;
       align-items:center;
-      justify-content: space-between;
       padding: 0 14px;
       background: var(--primary);
       color: #fff;
@@ -123,16 +117,12 @@
       background:#fff;
     }
 
-    #webchat{
-      height: 100%;
-    }
+    #webchat{ height: 100%; }
 
-    /* Make WebChat fill container */
-    #webchat, #webchat > * {
-      height: 100% !important;
-    }
+    /* Garante que o WebChat ocupa a altura toda */
+    #webchat, #webchat > * { height: 100% !important; }
 
-    /* Remove extra top padding/margins if present */
+    /* Remove padding/margens estranhas em algumas builds */
     #webchat .webchat__basic-transcript,
     #webchat [class*="webchat__basic-transcript"],
     #webchat [class*="basic-transcript"]{
@@ -140,20 +130,24 @@
       margin-top: 0 !important;
     }
 
-    /* Optional: slightly reduce default spacing */
-    #webchat * {
-      box-sizing: border-box;
+    /* Build stamp */
+    .buildStamp{
+      position: fixed;
+      left: 10px;
+      bottom: 10px;
+      font-size: 12px;
+      color: rgba(2, 6, 23, .55);
+      background: rgba(255,255,255,.65);
+      border: 1px solid rgba(2, 6, 23, .12);
+      border-radius: 10px;
+      padding: 6px 10px;
+      backdrop-filter: blur(6px);
+      user-select: none;
     }
 
-    /* Mobile */
     @media (max-width: 980px){
-      .page{
-        grid-template-columns: 1fr;
-      }
-      .chatBody{
-        height: 70vh;
-        min-height: 520px;
-      }
+      .page{ grid-template-columns: 1fr; }
+      .chatBody{ height: 70vh; min-height: 520px; }
     }
 
     @media (max-width: 520px){
@@ -166,40 +160,41 @@
 
 <body>
   <main class="page">
-    <!-- LEFT: Landing -->
     <section class="brandCard">
       <div class="brandInner">
-        <img class="eventLogo" src="/event-logo.png?v=9" alt="LM2026 - Driving Transformation" />
+        <img class="eventLogo" src="/event-logo.png?v=20" alt="LM2026 - Driving Transformation" />
         <h1>LM2026 — Bot Drive Transformation</h1>
-
-        <!-- One sentence only (PT or EN) -->
         <p class="subtitle" id="subtitle"></p>
-
-        <!-- Examples (PT or EN) -->
         <div class="hint" id="examples"></div>
       </div>
     </section>
 
-    <!-- RIGHT: Chat -->
-    <section class="chatCard" id="chat-card">
+    <section class="chatCard">
       <div class="chatHeader">
         <div class="chatTitle">
-          <img src="/bot-icon.png?v=9" alt="Bot icon" />
+          <img src="/bot-icon.png?v=20" alt="Bot icon" />
           Bot Drive Transformation
         </div>
       </div>
+
       <div class="chatBody">
         <div id="webchat" role="main"></div>
       </div>
     </section>
   </main>
 
+  <div class="buildStamp" id="buildStamp"></div>
+
   <script>
-    // Token Endpoint (Copilot Studio → Web app channel → Token endpoint)
+    // ==== BUILD (para confirmares que o deploy tem este ficheiro) ====
+    const BUILD = "LM2026-build-2026-02-11-HYBRID-3";
+    document.getElementById("buildStamp").textContent = BUILD;
+
+    // ==== Token endpoint (o teu) ====
     const tokenEndpoint =
       "https://0f0a81529bbde17b958c1afc6ed2af.58.environment.api.powerplatform.com/powervirtualagents/botsbyschema/copilots_header_a2b4e/directline/token?api-version=2022-03-01-preview";
 
-    // ---------------- Language (single sentence based on browser language) ----------------
+    // ==== Texto PT/EN consoante idioma do browser ====
     function isPT() {
       const lang = (navigator.language || navigator.userLanguage || "en").toLowerCase();
       return lang.startsWith("pt");
@@ -218,90 +213,101 @@
       const examplesEN =
         'Examples: <b>“Where is the venue?”</b>, <b>“Who are the contacts?”</b>, <b>“What are the key dates and times?”</b>';
 
-      const subtitleEl = document.getElementById("subtitle");
-      const examplesEl = document.getElementById("examples");
-
-      if (subtitleEl) subtitleEl.textContent = pt ? subtitlePT : subtitleEN;
-      if (examplesEl) examplesEl.innerHTML = pt ? examplesPT : examplesEN;
+      document.getElementById("subtitle").textContent = pt ? subtitlePT : subtitleEN;
+      document.getElementById("examples").innerHTML = pt ? examplesPT : examplesEN;
     }
 
-    // ---------------- Transcript hybrid fix (robust for WebChat variations) ----------------
-    function pickTranscriptElements() {
-      const root = document.getElementById("webchat");
-      if (!root) return {};
+    // ==== FIX ROBUSTO: encontrar e neutralizar "bottom anchoring" em qualquer versão do WebChat ====
 
-      // Scroll container (where scrollbar is)
-      const scroller =
-        root.querySelector(".webchat__basic-transcript__scrollable") ||
-        root.querySelector("[class*='basic-transcript__scrollable']") ||
-        root.querySelector("[role='log']") ||
-        root;
-
-      // Alignment container (where justify-content often lives)
-      const transcript =
-        root.querySelector(".webchat__basic-transcript__transcript") ||
-        root.querySelector("[class*='basic-transcript__transcript']") ||
-        root.querySelector("[role='log']");
-
-      return { scroller, transcript };
+    function getScrollableCandidates(root) {
+      const nodes = Array.from(root.querySelectorAll("*"));
+      return nodes.filter(el => {
+        const cs = getComputedStyle(el);
+        const oy = (cs.overflowY || "").toLowerCase();
+        return (oy === "auto" || oy === "scroll") && el.clientHeight > 80;
+      });
     }
 
-    let rafPending = false;
-    function applyHybridTranscriptLayout() {
-      if (rafPending) return;
-      rafPending = true;
+    function pickScroller(root) {
+      const candidates = getScrollableCandidates(root);
+      candidates.sort((a,b) => (b.clientHeight || 0) - (a.clientHeight || 0));
+      return candidates[0] || null;
+    }
+
+    function forceTopAlignmentOnAllFlexEndColumns(root) {
+      const nodes = Array.from(root.querySelectorAll("*"));
+      for (const el of nodes) {
+        const cs = getComputedStyle(el);
+        if (cs.display !== "flex") continue;
+        if ((cs.flexDirection || "").toLowerCase() !== "column") continue;
+        if ((cs.justifyContent || "").toLowerCase() !== "flex-end") continue;
+
+        // Este é EXACTAMENTE o tipo de container que cria o "vazio gigante"
+        el.style.setProperty("justify-content", "flex-start", "important");
+        el.style.setProperty("align-content", "flex-start", "important");
+      }
+    }
+
+    let rafLock = false;
+
+    function applyHybrid() {
+      if (rafLock) return;
+      rafLock = true;
 
       requestAnimationFrame(() => {
-        rafPending = false;
+        rafLock = false;
 
-        const { scroller, transcript } = pickTranscriptElements();
-        if (!scroller || !transcript) return;
+        const root = document.getElementById("webchat");
+        if (!root) return;
 
-        // Force flex + win against WebChat defaults
-        transcript.style.setProperty("display", "flex", "important");
-        transcript.style.setProperty("flex-direction", "column", "important");
-        transcript.style.setProperty("align-content", "flex-start", "important");
+        // 1) Mata o "anchor ao fundo" seja qual for o container
+        forceTopAlignmentOnAllFlexEndColumns(root);
+
+        // 2) Selecciona o scroller real (para decidir "cabe vs overflow")
+        const scroller = pickScroller(root);
+
+        // Se não encontrarmos scroller ainda, tentamos de novo no próximo tick
+        if (!scroller) return;
 
         const hasOverflow = scroller.scrollHeight > (scroller.clientHeight + 6);
 
         if (!hasOverflow) {
-          // Few messages -> align top (remove huge blank)
-          transcript.style.setProperty("justify-content", "flex-start", "important");
+          // Poucas mensagens: topo, sem vazio
           scroller.scrollTop = 0;
         } else {
-          // Many messages -> keep "chat feel" by showing bottom
-          transcript.style.setProperty("justify-content", "flex-start", "important");
+          // Muitas mensagens: comportamento de chat normal (mostra o fim)
           scroller.scrollTop = scroller.scrollHeight;
         }
       });
     }
 
-    function installWebChatObserver() {
+    function installObserver() {
       const root = document.getElementById("webchat");
       if (!root) return;
 
       const obs = new MutationObserver(() => {
-        applyHybridTranscriptLayout();
-        requestAnimationFrame(applyHybridTranscriptLayout);
-        setTimeout(applyHybridTranscriptLayout, 120);
+        // WebChat actualiza em múltiplos passos
+        applyHybrid();
+        requestAnimationFrame(applyHybrid);
+        setTimeout(applyHybrid, 120);
       });
 
       obs.observe(root, { childList: true, subtree: true });
 
-      window.addEventListener("resize", () => {
-        setTimeout(applyHybridTranscriptLayout, 120);
-      });
+      window.addEventListener("resize", () => setTimeout(applyHybrid, 120));
 
+      // arranque (quando o DOM do WebChat ainda está a “assentar”)
       setTimeout(() => {
-        applyHybridTranscriptLayout();
-        requestAnimationFrame(applyHybridTranscriptLayout);
-      }, 800);
+        applyHybrid();
+        requestAnimationFrame(applyHybrid);
+        setTimeout(applyHybrid, 600);
+      }, 900);
     }
 
-    // ---------------- WebChat init ----------------
+    // ==== WebChat init ====
+
     function showError(message) {
       const webchatEl = document.getElementById("webchat");
-      if (!webchatEl) return;
       webchatEl.innerHTML =
         `<div style="padding:12px;font:14px system-ui;color:#b91c1c;">
           <b>WebChat error</b><br/>${message}
@@ -310,15 +316,12 @@
 
     async function initWebChat() {
       try {
-        if (!window.WebChat) {
-          throw new Error("WebChat library não carregou (verifica bloqueios de rede/proxy).");
-        }
+        if (!window.WebChat) throw new Error("WebChat library não carregou.");
 
         const tokenUrl = new URL(tokenEndpoint);
         const apiVersion = tokenUrl.searchParams.get("api-version");
         const environmentEndPoint = tokenEndpoint.slice(0, tokenEndpoint.indexOf("/powervirtualagents"));
 
-        // 1) Direct Line regional
         const regionalUrl = `${environmentEndPoint}/powervirtualagents/regionalchannelsettings?api-version=${apiVersion}`;
         const regionalResp = await fetch(regionalUrl);
         if (!regionalResp.ok) throw new Error(`regionalchannelsettings falhou: HTTP ${regionalResp.status}`);
@@ -327,20 +330,17 @@
         const directLineBase = regional?.channelUrlsById?.directline;
         if (!directLineBase) throw new Error("regionalchannelsettings não devolveu channelUrlsById.directline");
 
-        // 2) Token
         const tokenResp = await fetch(tokenEndpoint);
         if (!tokenResp.ok) throw new Error(`token endpoint falhou: HTTP ${tokenResp.status}`);
 
         const conversationInfo = await tokenResp.json();
         if (!conversationInfo.token) throw new Error("Resposta do token endpoint não contém 'token'.");
 
-        // 3) Final domain
         const directLineDomain = new URL("v3/directline", directLineBase).toString();
 
-        // 4) Style options (bot icon)
         const styleOptions = {
           accent: "#0b6a77",
-          botAvatarImage: `${window.location.origin}/bot-icon.png?v=9`,
+          botAvatarImage: `${window.location.origin}/bot-icon.png?v=20`,
           botAvatarInitials: "DT",
           userAvatarInitials: "U",
           showAvatarInGroup: true,
@@ -349,8 +349,8 @@
           bubbleFromUserBorderRadius: 18
         };
 
-        // 5) Send event to trigger greeting
         let greetingSent = false;
+
         const store = window.WebChat.createStore(
           {},
           () => next => action => {
@@ -367,14 +367,14 @@
               });
             }
 
-            // After any activity, try to re-apply layout
+            // Re-aplica fix a cada actividade
             if (
               action.type === "DIRECT_LINE/INCOMING_ACTIVITY" ||
               action.type === "DIRECT_LINE/POST_ACTIVITY_FULFILLED" ||
               action.type === "DIRECT_LINE/CONNECT_FULFILLED"
             ) {
-              setTimeout(applyHybridTranscriptLayout, 120);
-              requestAnimationFrame(applyHybridTranscriptLayout);
+              setTimeout(applyHybrid, 150);
+              requestAnimationFrame(applyHybrid);
             }
 
             return result;
@@ -387,22 +387,16 @@
         });
 
         window.WebChat.renderWebChat(
-          {
-            directLine,
-            store,
-            locale: navigator.language || "pt-PT",
-            styleOptions
-          },
+          { directLine, store, locale: navigator.language || "pt-PT", styleOptions },
           document.getElementById("webchat")
         );
 
-        installWebChatObserver();
+        installObserver();
 
-        // Focus input + apply hybrid after render settles
         setTimeout(() => {
           document.querySelector("#webchat input")?.focus();
-          applyHybridTranscriptLayout();
-        }, 900);
+          applyHybrid();
+        }, 1100);
 
       } catch (e) {
         console.error(e);
