@@ -5,7 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>LM2026 | Bot Drive Transformation</title>
 
+  <!-- Favicon -->
   <link rel="icon" href="/bot-icon.png" />
+
+  <!-- Bot Framework Web Chat -->
   <script src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
 
   <style>
@@ -54,6 +57,7 @@
       text-align: left;
     }
 
+    /* Centered event logo */
     .eventLogo{
       width: 320px;
       max-width: 100%;
@@ -85,7 +89,7 @@
       line-height: 1.45;
     }
 
-    /* Chat */
+    /* Chat card */
     .chatHeader{
       height: 56px;
       display:flex;
@@ -119,12 +123,16 @@
       background:#fff;
     }
 
-    #webchat{ height: 100%; }
+    #webchat{
+      height: 100%;
+    }
 
-    /* Ensure WebChat fills container */
-    #webchat, #webchat > * { height: 100% !important; }
+    /* Make WebChat fill container */
+    #webchat, #webchat > * {
+      height: 100% !important;
+    }
 
-    /* Reduce any extra top padding */
+    /* Remove extra top padding/margins if present */
     #webchat .webchat__basic-transcript,
     #webchat [class*="webchat__basic-transcript"],
     #webchat [class*="basic-transcript"]{
@@ -132,9 +140,20 @@
       margin-top: 0 !important;
     }
 
+    /* Optional: slightly reduce default spacing */
+    #webchat * {
+      box-sizing: border-box;
+    }
+
+    /* Mobile */
     @media (max-width: 980px){
-      .page{ grid-template-columns: 1fr; }
-      .chatBody{ height: 70vh; min-height: 520px; }
+      .page{
+        grid-template-columns: 1fr;
+      }
+      .chatBody{
+        height: 70vh;
+        min-height: 520px;
+      }
     }
 
     @media (max-width: 520px){
@@ -147,19 +166,25 @@
 
 <body>
   <main class="page">
+    <!-- LEFT: Landing -->
     <section class="brandCard">
       <div class="brandInner">
-        <img class="eventLogo" src="/event-logo.png?v=7" alt="LM2026 - Driving Transformation" />
+        <img class="eventLogo" src="/event-logo.png?v=9" alt="LM2026 - Driving Transformation" />
         <h1>LM2026 — Bot Drive Transformation</h1>
+
+        <!-- One sentence only (PT or EN) -->
         <p class="subtitle" id="subtitle"></p>
+
+        <!-- Examples (PT or EN) -->
         <div class="hint" id="examples"></div>
       </div>
     </section>
 
+    <!-- RIGHT: Chat -->
     <section class="chatCard" id="chat-card">
       <div class="chatHeader">
         <div class="chatTitle">
-          <img src="/bot-icon.png?v=7" alt="Bot icon" />
+          <img src="/bot-icon.png?v=9" alt="Bot icon" />
           Bot Drive Transformation
         </div>
       </div>
@@ -170,9 +195,11 @@
   </main>
 
   <script>
+    // Token Endpoint (Copilot Studio → Web app channel → Token endpoint)
     const tokenEndpoint =
       "https://0f0a81529bbde17b958c1afc6ed2af.58.environment.api.powerplatform.com/powervirtualagents/botsbyschema/copilots_header_a2b4e/directline/token?api-version=2022-03-01-preview";
 
+    // ---------------- Language (single sentence based on browser language) ----------------
     function isPT() {
       const lang = (navigator.language || navigator.userLanguage || "en").toLowerCase();
       return lang.startsWith("pt");
@@ -191,42 +218,32 @@
       const examplesEN =
         'Examples: <b>“Where is the venue?”</b>, <b>“Who are the contacts?”</b>, <b>“What are the key dates and times?”</b>';
 
-      document.getElementById("subtitle").textContent = pt ? subtitlePT : subtitleEN;
-      document.getElementById("examples").innerHTML = pt ? examplesPT : examplesEN;
+      const subtitleEl = document.getElementById("subtitle");
+      const examplesEl = document.getElementById("examples");
+
+      if (subtitleEl) subtitleEl.textContent = pt ? subtitlePT : subtitleEN;
+      if (examplesEl) examplesEl.innerHTML = pt ? examplesPT : examplesEN;
     }
 
-    function showError(message) {
-      const webchatEl = document.getElementById("webchat");
-      if (!webchatEl) return;
-      webchatEl.innerHTML =
-        `<div style="padding:12px;font:14px system-ui;color:#b91c1c;">
-          <b>WebChat error</b><br/>${message}
-        </div>`;
-    }
-
-    // ---------- HYBRID FIX (robust) ----------
-    function findTranscriptScroller() {
+    // ---------------- Transcript hybrid fix (robust for WebChat variations) ----------------
+    function pickTranscriptElements() {
       const root = document.getElementById("webchat");
-      if (!root) return null;
+      if (!root) return {};
 
-      const candidates = Array.from(
-        root.querySelectorAll(
-          "[role='log'], .webchat__basic-transcript__scrollable, [class*='basic-transcript__scrollable'], [class*='scrollable']"
-        )
-      );
+      // Scroll container (where scrollbar is)
+      const scroller =
+        root.querySelector(".webchat__basic-transcript__scrollable") ||
+        root.querySelector("[class*='basic-transcript__scrollable']") ||
+        root.querySelector("[role='log']") ||
+        root;
 
-      // Prefer an element that is actually scrollable (overflow-y auto/scroll) and has height
-      for (const el of candidates) {
-        const cs = window.getComputedStyle(el);
-        const overflowY = (cs.overflowY || "").toLowerCase();
-        if ((overflowY === "auto" || overflowY === "scroll") && el.clientHeight > 50) {
-          return el;
-        }
-      }
+      // Alignment container (where justify-content often lives)
+      const transcript =
+        root.querySelector(".webchat__basic-transcript__transcript") ||
+        root.querySelector("[class*='basic-transcript__transcript']") ||
+        root.querySelector("[role='log']");
 
-      // Fallback: pick the tallest candidate
-      candidates.sort((a, b) => (b.clientHeight || 0) - (a.clientHeight || 0));
-      return candidates[0] || null;
+      return { scroller, transcript };
     }
 
     let rafPending = false;
@@ -237,80 +254,93 @@
       requestAnimationFrame(() => {
         rafPending = false;
 
-        const scroller = findTranscriptScroller();
-        if (!scroller) return;
+        const { scroller, transcript } = pickTranscriptElements();
+        if (!scroller || !transcript) return;
 
-        // Make sure it's flex (WebChat usually is; we enforce in case it isn't)
-        scroller.style.display = "flex";
-        scroller.style.flexDirection = "column";
-        scroller.style.alignContent = "flex-start";
+        // Force flex + win against WebChat defaults
+        transcript.style.setProperty("display", "flex", "important");
+        transcript.style.setProperty("flex-direction", "column", "important");
+        transcript.style.setProperty("align-content", "flex-start", "important");
 
-        const fits = scroller.scrollHeight <= (scroller.clientHeight + 6);
+        const hasOverflow = scroller.scrollHeight > (scroller.clientHeight + 6);
 
-        if (fits) {
-          // Few messages -> no giant blank area
-          scroller.style.justifyContent = "flex-start";
+        if (!hasOverflow) {
+          // Few messages -> align top (remove huge blank)
+          transcript.style.setProperty("justify-content", "flex-start", "important");
           scroller.scrollTop = 0;
         } else {
-          // Many messages -> behave like normal chat (bottom)
-          scroller.style.justifyContent = "flex-end";
+          // Many messages -> keep "chat feel" by showing bottom
+          transcript.style.setProperty("justify-content", "flex-start", "important");
           scroller.scrollTop = scroller.scrollHeight;
         }
       });
     }
 
-    function installTranscriptObserver() {
+    function installWebChatObserver() {
       const root = document.getElementById("webchat");
       if (!root) return;
 
       const obs = new MutationObserver(() => {
-        // Apply after DOM updates
         applyHybridTranscriptLayout();
-        // Apply again next frame (WebChat sometimes updates in 2 passes)
         requestAnimationFrame(applyHybridTranscriptLayout);
+        setTimeout(applyHybridTranscriptLayout, 120);
       });
 
       obs.observe(root, { childList: true, subtree: true });
 
       window.addEventListener("resize", () => {
-        setTimeout(applyHybridTranscriptLayout, 100);
+        setTimeout(applyHybridTranscriptLayout, 120);
       });
 
-      // Initial kick
       setTimeout(() => {
         applyHybridTranscriptLayout();
         requestAnimationFrame(applyHybridTranscriptLayout);
-      }, 600);
+      }, 800);
     }
 
-    // ---------- WebChat ----------
+    // ---------------- WebChat init ----------------
+    function showError(message) {
+      const webchatEl = document.getElementById("webchat");
+      if (!webchatEl) return;
+      webchatEl.innerHTML =
+        `<div style="padding:12px;font:14px system-ui;color:#b91c1c;">
+          <b>WebChat error</b><br/>${message}
+        </div>`;
+    }
+
     async function initWebChat() {
       try {
-        if (!window.WebChat) throw new Error("WebChat library não carregou.");
+        if (!window.WebChat) {
+          throw new Error("WebChat library não carregou (verifica bloqueios de rede/proxy).");
+        }
 
         const tokenUrl = new URL(tokenEndpoint);
         const apiVersion = tokenUrl.searchParams.get("api-version");
         const environmentEndPoint = tokenEndpoint.slice(0, tokenEndpoint.indexOf("/powervirtualagents"));
 
+        // 1) Direct Line regional
         const regionalUrl = `${environmentEndPoint}/powervirtualagents/regionalchannelsettings?api-version=${apiVersion}`;
         const regionalResp = await fetch(regionalUrl);
         if (!regionalResp.ok) throw new Error(`regionalchannelsettings falhou: HTTP ${regionalResp.status}`);
 
         const regional = await regionalResp.json();
         const directLineBase = regional?.channelUrlsById?.directline;
-        if (!directLineBase) throw new Error("regionalchannelsettings não devolveu directline URL.");
+        if (!directLineBase) throw new Error("regionalchannelsettings não devolveu channelUrlsById.directline");
 
+        // 2) Token
         const tokenResp = await fetch(tokenEndpoint);
         if (!tokenResp.ok) throw new Error(`token endpoint falhou: HTTP ${tokenResp.status}`);
 
         const conversationInfo = await tokenResp.json();
-        if (!conversationInfo.token) throw new Error("Resposta do token endpoint não contém token.");
+        if (!conversationInfo.token) throw new Error("Resposta do token endpoint não contém 'token'.");
 
+        // 3) Final domain
         const directLineDomain = new URL("v3/directline", directLineBase).toString();
 
+        // 4) Style options (bot icon)
         const styleOptions = {
           accent: "#0b6a77",
-          botAvatarImage: `${window.location.origin}/bot-icon.png?v=7`,
+          botAvatarImage: `${window.location.origin}/bot-icon.png?v=9`,
           botAvatarInitials: "DT",
           userAvatarInitials: "U",
           showAvatarInGroup: true,
@@ -319,8 +349,8 @@
           bubbleFromUserBorderRadius: 18
         };
 
+        // 5) Send event to trigger greeting
         let greetingSent = false;
-
         const store = window.WebChat.createStore(
           {},
           () => next => action => {
@@ -337,7 +367,7 @@
               });
             }
 
-            // Any activity → re-apply hybrid layout (DOM may update after this)
+            // After any activity, try to re-apply layout
             if (
               action.type === "DIRECT_LINE/INCOMING_ACTIVITY" ||
               action.type === "DIRECT_LINE/POST_ACTIVITY_FULFILLED" ||
@@ -357,15 +387,22 @@
         });
 
         window.WebChat.renderWebChat(
-          { directLine, store, locale: navigator.language || "pt-PT", styleOptions },
+          {
+            directLine,
+            store,
+            locale: navigator.language || "pt-PT",
+            styleOptions
+          },
           document.getElementById("webchat")
         );
 
-        installTranscriptObserver();
+        installWebChatObserver();
 
+        // Focus input + apply hybrid after render settles
         setTimeout(() => {
           document.querySelector("#webchat input")?.focus();
-        }, 800);
+          applyHybridTranscriptLayout();
+        }, 900);
 
       } catch (e) {
         console.error(e);
