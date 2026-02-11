@@ -55,16 +55,19 @@
 
     .brandInner{
       padding: 22px 22px 18px 22px;
+      /* Keep text left-aligned, but allow centred logo */
+      text-align: left;
     }
 
+    /* ✅ Centred event logo */
     .eventLogo{
-      width: 260px;
+      width: 320px;              /* tweak if needed */
       max-width: 100%;
       border-radius: 14px;
       border: 1px solid var(--border);
       display:block;
-      background:#fff;
-      margin-bottom: 14px;
+      margin: 0 auto 14px auto;  /* centres horizontally */
+      background: transparent;
     }
 
     h1{
@@ -106,13 +109,16 @@
       font-weight: 700;
     }
 
+    /* Header icon styling (works well with white/transparent bot icon) */
     .chatTitle img{
-  width: 22px;
-  height: 22px;
-  display: block;
-  background: transparent !important;
-  border-radius: 0 !important;
-  padding: 0 !important;
+      width: 22px;
+      height: 22px;
+      display: block;
+      padding: 4px;
+      border-radius: 10px;
+      background: rgba(255,255,255,.16) !important;
+      border: 1px solid rgba(255,255,255,.22);
+      box-sizing: content-box;
     }
 
     .chatBody{
@@ -123,6 +129,11 @@
     #webchat{
       height: 100%;
     }
+
+    /* ✅ Reduce the big blank space at the top of the transcript */
+    #webchat, #webchat > * { height: 100% !important; }
+    #webchat .webchat__basic-transcript{ padding-top: 0 !important; }
+    #webchat .webchat__basic-transcript__transcript{ align-content: flex-start !important; }
 
     /* Mobile */
     @media (max-width: 980px){
@@ -148,7 +159,7 @@
     <!-- LEFT: Landing -->
     <section class="brandCard">
       <div class="brandInner">
-        <img class="eventLogo" src="/event-logo.png" alt="LM2026 - Driving Transformation" />
+        <img class="eventLogo" src="/event-logo.png?v=3" alt="LM2026 - Driving Transformation" />
 
         <h1>LM2026 — Bot Drive Transformation</h1>
 
@@ -164,7 +175,7 @@
     <section class="chatCard" id="chat-card">
       <div class="chatHeader">
         <div class="chatTitle">
-          <img src="/bot-icon.png" alt="Bot icon" />
+          <img src="/bot-icon.png?v=3" alt="Bot icon" />
           Bot Drive Transformation
         </div>
       </div>
@@ -248,10 +259,10 @@
         // 3) Domínio final
         const directLineDomain = new URL("v3/directline", directLineBase).toString();
 
-        // 4) Style options (ícone sempre visível)
+        // 4) Style options (bot icon + avatar)
         const styleOptions = {
           accent: "#0b6a77",
-          botAvatarImage: `${window.location.origin}/bot-icon.png`,
+          botAvatarImage: `${window.location.origin}/bot-icon.png?v=3`,
           botAvatarInitials: "DT",
           userAvatarInitials: "U",
           showAvatarInGroup: true,
@@ -294,10 +305,11 @@
           document.getElementById("webchat")
         );
 
-        // foco no input
+        // ✅ Focus input + force transcript scroll (reduces "blank" initial view)
         setTimeout(() => {
           document.querySelector("#webchat input")?.focus();
-        }, 450);
+          document.querySelector('[role="log"]')?.scrollTo(0, 999999);
+        }, 650);
 
       } catch (e) {
         console.error(e);
@@ -312,4 +324,3 @@
   </script>
 </body>
 </html>
-
