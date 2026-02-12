@@ -154,10 +154,25 @@
     }
   
     /* Contrast fix (Version 2): bot avatar ring so it stands out on both teal header and white chat background */
-    #webchat img[src*="bot-icon.png"]{
-      border-radius: 999px !important;
+
+    /* Bot avatar (prompt icon) — match banner badge style exactly and avoid clipping with avatarSize */
+    #webchat .webchat__avatar--bot{
       background: #ffffff !important;
-      box-shadow: 0 0 0 2px rgba(15, 23, 42, .45), 0 1px 6px rgba(0,0,0,.12);
+      border: 2px solid rgba(15, 23, 42, .55) !important;
+      border-radius: 999px !important;
+      box-shadow: 0 1px 6px rgba(0,0,0,.18) !important;
+
+      /* With avatarSize: 36, these values yield an inner icon area ~22px (same as header) */
+      padding: 5px !important;
+      box-sizing: border-box !important;
+    }
+
+    #webchat .webchat__avatar--bot .webchat__avatar__image{
+      width: 100% !important;
+      height: 100% !important;
+      display: block !important;
+      border-radius: 999px !important;
+      background: transparent !important;
     }
 
 </style>
@@ -175,14 +190,22 @@
         <p class="subtitle">
           Assistente do evento interno da SODECIA para apoiar participantes com informações sobre logística, agenda, contactos e conteúdos disponíveis na base de conhecimento do evento.
         </p>
-        
+        <p class="subtitle">
+          Assistant for the SODECIA internal event to support participants with information about logistics, agenda, contacts and content available in the event's knowledge base.
+        </p>
+
         <p class="powered">Powered by AI SODECIA Lab.</p>
 
         <div class="hint">
-          Exemplos:
+          Exemplos / Examples:
           <b>“Onde é o local?”</b>,
           <b>“Quem são os contactos?”</b>,
           <b>“Quais são as datas e horas?”</b>,
+          <b>“Where is the venue?”</b>,
+          <b>“Who are the contacts?”</b>,
+          <b>“What are the key dates and times?”</b>,
+          <b>“Which are transfers for the event?”</b>,
+          <b>“Which are the BUS sitting definitions?”</b>,
           etc.
         </div>
       </div>
@@ -400,6 +423,3 @@
   </script>
 </body>
 </html>
-
-
-
